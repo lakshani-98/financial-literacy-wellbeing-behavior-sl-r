@@ -1,0 +1,165 @@
+---
+title: "Validation Report"
+author: "Lakshani Galwatta"
+date: "2025-07-26"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Validation Report
+```{r }
+install.packages("psych")  # Run this only once
+library(psych)
+```
+
+
+```{r}
+# 2. Load your full dataset
+library(readr)
+
+# Load a CSV file
+data <- read.csv(
+  "J:/Msc/Statistical-Inference/Quesnstionnaire/survey.csv",
+  fileEncoding = "UTF-8",
+  stringsAsFactors = FALSE,
+  check.names = FALSE,
+  strip.white = TRUE
+)
+
+head(data_csv)
+```
+```{r}
+# 3. Rename columns
+colnames(data) <- c(
+  "timestamp", "age", "gender", "education", "employment_status", "employment_sector",
+  "monthly_income", "marital_status", "dependent_children", "finlit_interest", "finlit_inflation",
+  "finlit_diversification", "finlit_compound_interest", "finlit_risk_investment", 
+  "behavior_saving", "behavior_expense_tracking", "behavior_budgeting", "behavior_price_comparison",
+  "payment_tools", "digital_tools", "investment_types",
+  "wellbeing_confidence", "wellbeing_satisfaction", "wellbeing_emergency_funds",
+  "wellbeing_digital_anxiety", "wellbeing_financial_worry", "wellbeing_stress",
+  "open_ended_wellbeing", "open_ended_initiatives"
+)
+```
+
+```{r}
+# Extract the first 50 rows
+subset_data <- data[1:123, ]
+
+# Create a new data frame with recoded answers
+finlit_items <- data.frame(
+  compound_interest = ifelse(subset_data$finlit_interest == "More than Rs. 12,500", 1, 0),
+  inflation = ifelse(subset_data$finlit_inflation == "True", 1, 0),
+  diversification = ifelse(subset_data$finlit_diversification == "It reduces the overall risk by investing in different assets", 1, 0),
+  compound_definition = ifelse(subset_data$finlit_compound_interest == "Interest is calculated on both the initial amount and any interest already earned", 1, 0),
+  risk_investment = ifelse(subset_data$finlit_risk_investment == "Cryptocurrency or stocks", 1, 0)
+)
+```
+
+```{r}
+# 9. Run Cronbach's Alpha test for each construct
+cat("📘 Financial Literacy:\n")
+alpha(finlit_items, check.keys = TRUE)
+```
+
+```{r}
+# Extract first 50 rows for pilot
+pilot_data <- data[1:123, ]
+
+# Recode Yes/No columns as 1/0
+behavior_saving <- ifelse(pilot_data$behavior_saving == "Yes", 1, 0)
+behavior_price_comparison <- ifelse(pilot_data$behavior_price_comparison == "Yes", 1, 0)
+
+# Recode frequency variables (Always=3, Sometimes=2, Rarely=1, Never=0)
+recode_freq <- function(x) {
+  recode <- c("Never"=0, "Rarely"=1, "Sometimes"=2, "Always"=3)
+  as.numeric(recode[x])
+}
+
+behavior_expense_tracking <- recode_freq(pilot_data$behavior_expense_tracking)
+behavior_budgeting <- recode_freq(pilot_data$behavior_budgeting)
+
+# Recode payment_tools (multiple selections, comma separated string)
+payment_tools_options <- c("Cash", "LankaQR", "eZ Cash", "Debit/Credit Card", "Internet Banking", "Other")
+payment_tools_raw <- pilot_data$payment_tools
+
+payment_tools_matrix <- sapply(payment_tools_options, function(tool) {
+  as.numeric(grepl(tool, payment_tools_raw))
+})
+colnames(payment_tools_matrix) <- paste0("payment_tools_", gsub(" ", "_", payment_tools_options))
+
+# Recode digital_tools (multiple selections)
+digital_tools_options <- c("Budgeting apps", "Expense trackers", "Bank mobile apps", 
+                           "Mobile wallets", "Spreadsheets", "None")
+digital_tools_raw <- pilot_data$digital_tools
+
+digital_tools_matrix <- sapply(digital_tools_options, function(tool) {
+  as.numeric(grepl(tool, digital_tools_raw))
+})
+colnames(digital_tools_matrix) <- paste0("digital_tools_", gsub(" ", "_", digital_tools_options))
+
+# Recode investment_types (multiple selections)
+investment_options <- c("Savings accounts", "Fixed Deposits", "Stocks", "Government bonds / Treasury bills", 
+                        "Cryptocurrency", "Real estate", "Gold or precious metals", "Business or entrepreneurship",
+                        "I have not invested in any of these")
+investment_types_raw <- pilot_data$investment_types
+
+investment_types_matrix <- sapply(investment_options, function(tool) {
+  as.numeric(grepl(tool, investment_types_raw))
+})
+colnames(investment_types_matrix) <- paste0("investment_types_", gsub(" ", "_", gsub("/", "_", investment_options)))
+
+# Combine all recoded variables into one dataframe
+behavior_items <- data.frame(
+  behavior_saving,
+  behavior_expense_tracking,
+  behavior_budgeting,
+  behavior_price_comparison
+)
+behavior_items <- cbind(behavior_items, payment_tools_matrix, digital_tools_matrix, investment_types_matrix)
+
+# Remove rows with missing data
+behavior_items <- na.omit(behavior_items)
+
+# Calculate Cronbach's Alpha
+alpha_result <- alpha(behavior_items, check.keys = TRUE)
+print(alpha_result)
+
+```
+
+```{r}
+# Assuming 'data' is your full dataset and column names are renamed as before
+# Extract first 50 rows for pilot study
+pilot_data <- data[1:123, ]
+
+# Extract relevant columns (assuming renamed correctly)
+wellbeing_items <- pilot_data[c(
+  "wellbeing_confidence",       # Q21
+  "wellbeing_satisfaction",     # Q22
+  "wellbeing_emergency_funds",  # Q23
+  "wellbeing_digital_anxiety",  # Q24
+  "wellbeing_financial_worry",  # Q25
+  "wellbeing_stress"            # Q26
+)]
+
+# Convert to numeric if stored as characters or factors
+wellbeing_items[] <- lapply(wellbeing_items, function(x) as.numeric(as.character(x)))
+
+# Check for any missing data and remove those rows
+wellbeing_items <- na.omit(wellbeing_items)
+
+# Run Cronbach’s Alpha with automatic reverse scoring where needed
+alpha_result <- alpha(wellbeing_items, check.keys = TRUE)
+
+print(alpha_result)
+
+```
+
+```{r}
+sapply(finlit_items, var)
+```
+
+

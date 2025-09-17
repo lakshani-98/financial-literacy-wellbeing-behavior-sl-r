@@ -1,0 +1,956 @@
+---
+title: "A Survey on Financial Literacy, Well-being, and Behaviors Among Sri Lankan
+  Adults"
+author: "Lakshani Galwatta"
+date: "2025-07-20"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data Preparation
+
+```{r}
+library(summarytools)
+library(dplyr)
+library(stringr)
+library(scales)
+library(ggplot2)
+library(gmodels)
+library(stats)
+library(car)
+library(ggpubr)
+library(psych) 
+library(tidyr)
+```
+
+```{r}
+library(readr)
+
+# Load a CSV file
+data_csv <- read.csv(
+  "J:/Msc/Statistical-Inference/Quesnstionnaire/survey.csv",
+  fileEncoding = "UTF-8",
+  stringsAsFactors = FALSE,
+  check.names = FALSE,
+  strip.white = TRUE
+)
+
+head(data_csv)
+```
+
+```{r}
+# Show column names
+nrow(data_csv)
+```
+
+```{r}
+# Rename column names
+names(data_csv) <- c("timestamp", "age", "gender", "education", "employment_status", "employment_sector", "monthly_income", "marital_status", "dependent_children", "finlit_interest", "finlit_inflation", "finlit_diversification", "finlit_compound_interest", "finlit_risk_investment", "behavior_saving", "behavior_expense_tracking", "behavior_budgeting", "behavior_price_comparison","behavior_payment_tools", "behavior_digital_tools", "behavior_investment_types","wellbeing_confidence", "wellbeing_satisfaction", "wellbeing_emergency_funds", "wellbeing_digital_anxiety", "wellbeing_financial_worry", "wellbeing_stress", "open_ended_wellbeing", "open_ended_initiatives")
+
+```
+
+```{r}
+# Convert demographic variables to factors with specified levels (where applicable)
+data_csv <- data_csv %>%
+  mutate(
+    age = factor(age, levels = c(
+      "18–24 years", "25–34 years", "35–44 years", "45–54 years", "55–64 years", "65 years and above")),
+    gender = factor(gender, levels = c("Male", "Female", "Prefer not to say", "Other")),
+    education = factor(education, levels = c(
+      "Secondary education (O/L or A/L)",
+      "Diploma or Technical / Vocational qualification",
+      "Bachelor’s degree",
+      "Master’s degree",
+      "Phd",
+      "Other")),
+    employment_status = factor(employment_status, levels = c(
+      "Employed full-time", "Employed part-time", "Self-employed",
+      "Unemployed – actively looking for work",
+      "Unemployed – not currently looking for work",
+      "Student", "Retired", "Other")),
+    employment_sector = factor(employment_sector, levels = c(
+      "Technology / IT", "Healthcare / Medical", "Banking, Finance, or Insurance",
+      "Education / Academic", "Government / Public sector", "Manufacturing / Industrial",
+      "Retail / Sales", "Agriculture / Farming", "Other")),
+    monthly_income = factor(monthly_income, levels = c(
+      "Less than Rs. 50,000",
+      "50,000 – 99,999",
+      "100,000 – 149,999",
+      "150,000 – 249,999",
+      "250,000 – 499,999",
+      "500,000 or more",
+      "Prefer not to say")),
+    marital_status = factor(marital_status, levels = c("Single", "Married", "Divorced", "Widowed")),
+    dependent_children = factor(dependent_children, levels = c("None", "1", "2", "3 or more"))
+  )
+```
+
+```{r}
+# Convert financial literacy columns to factors with levels in logical order (if any)
+data_csv <- data_csv %>%
+  mutate(
+    finlit_interest = factor(finlit_interest, levels = c(
+      "Exactly Rs. 12,500", "More than Rs. 12,500", "Less than Rs. 12,500", "I Don’t know")),
+    finlit_inflation = as.logical(as.character(finlit_inflation)),
+    finlit_diversification = factor(finlit_diversification, levels = c(
+      "It guarantees high returns",
+      "It reduces the overall risk by investing in different assets",
+      "It helps avoid paying taxes",
+      "It ensures your money grows faster",
+      "I don’t know")),
+    finlit_compound_interest = factor(finlit_compound_interest, levels = c(
+      "Interest is calculated only on the initial amount",
+      "Interest is calculated on both the initial amount and any interest already earned",
+      "You receive interest only when you withdraw money",
+      "I don’t know")),
+    finlit_risk_investment = factor(finlit_risk_investment, levels = c(
+      "Fixed deposit (e.g., term deposit at a bank)",
+      "Treasury bill (short-term government security)",
+      "Cryptocurrency or stocks",
+      "Savings account (regular bank deposit)")
+    )
+  )
+
+```
+
+##  1. Demographic Summary
+
+### 1. Age Distribution
+
+```{r age-dist, fig.width=6, fig.height=4}
+library(ggplot2)
+
+# Bar plot for Age
+ggplot(data_csv, aes(x = age)) +
+  geom_bar(fill = "steelblue") +
+  labs(title = "Age Distribution of Respondents",
+       x = "Age Group",
+       y = "Count") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+####Interpretation:
+
+The majority of respondents belong to the 25–34 years age group. It indicates that the survey sample is skewed towards young adults.
+
+### 2. Gender Breakdown
+```{r}
+
+# Prepare data for pie chart
+gender_counts <- data_csv %>%
+  filter(!is.na(gender)) %>%
+  count(gender) %>%
+  mutate(percent = n / sum(n) * 100,
+         label = paste0(gender, " (", round(percent, 1), "%)"))
+
+# Pie chart
+ggplot(gender_counts, aes(x = "", y = percent, fill = gender)) +
+  geom_col(color = "white") +
+  coord_polar(theta = "y") +
+  geom_text(aes(label = label), position = position_stack(vjust = 0.5)) +
+  labs(title = "Gender Distribution of Respondents", fill = "Gender") +
+  theme_void()
+```
+####Interpretation:
+
+Male respondents constitute the majority of the sample, suggesting higher participation among men in the survey.
+
+###3. Education Level
+```{r}
+# Bar plot for Education
+ggplot(data_csv, aes(x = education)) +
+  geom_bar(fill = "darkorange") +
+  labs(title = "Highest Level of Education Completed",
+       x = "Education Level",
+       y = "Count") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+####Interpretation:
+
+Most respondents have completed a Bachelor's degree, reflecting a well-educated sample population.
+
+### 4. Employment Status
+```{r}
+# Bar plot for Employment Status
+ggplot(data_csv, aes(x = employment_status)) +
+  geom_bar(fill = "forestgreen") +
+  labs(title = "Employment Status of Respondents",
+       x = "Employment Status",
+       y = "Count") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+####Interpretation:
+
+The majority of respondents are employed full-time, indicating the sample largely comprises working adults.
+
+### 5. Income Level
+
+```{r}
+
+# Make sure monthly_income is a factor and ordered logically (adjust levels as needed)
+data_csv$monthly_income <- factor(data_csv$monthly_income, 
+                                 levels = c("Less than Rs. 50,000",
+                                            "50,000 – 99,999",
+                                            "100,000 – 149,999",
+                                            "150,000 – 249,999",
+                                            "250,000 – 499,999",
+                                            "500,000 or more",
+                                            "Prefer not to say"))  # add this if you included that option
+
+# Bar plot for monthly income distribution
+ggplot(data_csv, aes(x = monthly_income)) +
+  geom_bar(fill = "steelblue") +
+  labs(title = "Distribution of Monthly Income Levels",
+       x = "Monthly Income Range (LKR)",
+       y = "Count of Respondents") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Pie chart for monthly income distribution
+income_counts <- data_csv %>%
+  count(monthly_income) %>%
+  filter(!is.na(monthly_income))
+
+ggplot(income_counts, aes(x = "", y = n, fill = monthly_income)) +
+  geom_col() +
+  coord_polar(theta = "y") +
+  labs(title = "Monthly Income Distribution (Pie Chart)", fill = "Income Range") +
+  theme_void()
+
+```
+####Intepretation
+The bar plot (and pie chart) illustrates the distribution of respondents across different monthly income ranges. From the visualization, it is evident that:
+
+The majority of participants fall within the "Less than Rs. 50,000" category, indicating this income bracket is most common among the survey respondents.
+
+Income groups such as "500,000 or more" represent smaller proportions, suggesting fewer respondents earn in these ranges.
+
+
+##  1. Financial Literacy data Analysis
+
+### 1. Frequency and Percentage Tables
+
+```{r}
+# Function to generate summary table and bar plot
+describe_finlit_question <- function(data, question_var, question_label) {
+  # Frequency table
+  freq_table <- data %>%
+    group_by({{question_var}}) %>%
+    summarise(Count = n()) %>%
+    mutate(Percentage = round(Count / sum(Count) * 100, 1))
+  
+  print(paste("Summary for:", question_label))
+  print(freq_table)
+  
+  # Bar plot
+  ggplot(freq_table, aes(x = {{question_var}}, y = Percentage, fill = {{question_var}})) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste0(Percentage, "%")), vjust = -0.5) +
+  labs(
+    title = paste("Distribution of Responses:", question_label),
+    x = question_label,
+    y = "Percentage"
+  ) +
+  scale_y_continuous(labels = percent_format(scale = 1)) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 30, hjust = 1),
+    plot.margin = margin(t = 20, r = 10, b = 10, l = 10)
+  ) +
+  coord_cartesian(clip = "off") +
+  guides(fill = "none")
+}
+
+# Run for each question
+describe_finlit_question(data_csv, finlit_interest, "Understanding Interest Accumulation")
+describe_finlit_question(data_csv, finlit_inflation, "Understanding Inflation")
+describe_finlit_question(data_csv, finlit_diversification, "Purpose of Diversification")
+describe_finlit_question(data_csv, finlit_compound_interest, "Understanding Compound Interest")
+describe_finlit_question(data_csv, finlit_risk_investment, "Perception of Risk in Investment Types")
+
+```
+
+
+### 2. Chi-square Tests Between Financial Literacy Questions and Gender
+
+```{r}
+finlit_vars <- c("finlit_interest", "finlit_inflation", "finlit_diversification",
+                 "finlit_compound_interest", "finlit_risk_investment")
+
+for (var in finlit_vars) {
+  cat("\n=============================================\n")
+  cat("Chi-square test between gender and", var, "\n\n")
+  
+  # Print hypotheses
+  cat("Null hypothesis (H0): There is NO association between gender and", var, "\n")
+  cat("Alternative hypothesis (H1): There IS an association between gender and", var, "\n\n")
+  
+  # Create contingency table and remove zero margins
+  tbl <- table(data_csv$gender, data_csv[[var]])
+  tbl <- tbl[rowSums(tbl) > 0, colSums(tbl) > 0]
+  
+  if (nrow(tbl) < 2 || ncol(tbl) < 2) {
+    cat("Warning: Not enough data for chi-square test. Skipping this variable.\n")
+    next
+  }
+  
+  test <- tryCatch(
+    chisq.test(tbl, simulate.p.value = TRUE, B = 2000),
+    error = function(e) {
+      cat("Error running test:", e$message, "\nSkipping this variable.\n")
+      return(NULL)
+    }
+  )
+  
+  if (is.null(test)) next
+  
+  print(tbl)
+  print(test)
+  
+  if (test$p.value < 0.05) {
+    cat("=> Reject the null hypothesis: Significant association (p =", test$p.value, ")\n")
+  } else {
+    cat("=> Fail to reject the null hypothesis: No significant association (p =", test$p.value, ")\n")
+  }
+}
+```
+### 3. Chi-square Tests Between Financial Literacy Questions and Age 
+
+```{r}
+finlit_vars <- c("finlit_interest", "finlit_inflation", "finlit_diversification",
+                 "finlit_compound_interest", "finlit_risk_investment")
+
+for (var in finlit_vars) {
+  cat("\n=============================================\n")
+  cat("Chi-square test between age and", var, "\n\n")
+  
+  cat("Null hypothesis (H0): There is NO association between age group and", var, "\n")
+  cat("Alternative hypothesis (H1): There IS an association between age group and", var, "\n\n")
+  
+  tbl <- table(data_csv$age, data_csv[[var]])
+  tbl <- tbl[rowSums(tbl) > 0, colSums(tbl) > 0]
+  
+  if (nrow(tbl) < 2 || ncol(tbl) < 2) {
+    cat("Warning: Not enough data for chi-square test. Skipping this variable.\n")
+    next
+  }
+  
+  test <- tryCatch(
+    chisq.test(tbl, simulate.p.value = TRUE, B = 2000),
+    error = function(e) {
+      cat("Error running test:", e$message, "\nSkipping this variable.\n")
+      return(NULL)
+    }
+  )
+  
+  if (is.null(test)) next
+  
+  print(tbl)
+  print(test)
+  
+  if (test$p.value < 0.05) {
+    cat("=> Reject the null hypothesis: Significant association (p =", test$p.value, ")\n")
+  } else {
+    cat("=> Fail to reject the null hypothesis: No significant association (p =", test$p.value, ")\n")
+  }
+}
+```
+### 4. Chi-square Tests Between Financial Literacy Questions and Education Level
+```{r}
+finlit_vars <- c("finlit_interest", "finlit_inflation", "finlit_diversification",
+                 "finlit_compound_interest", "finlit_risk_investment")
+
+for (var in finlit_vars) {
+  cat("\n=============================================\n")
+  cat("Chi-square test between education and", var, "\n\n")
+  
+  cat("Null hypothesis (H0): There is NO association between education level and", var, "\n")
+  cat("Alternative hypothesis (H1): There IS an association between education level and", var, "\n\n")
+  
+  tbl <- table(data_csv$education, data_csv[[var]])
+  tbl <- tbl[rowSums(tbl) > 0, colSums(tbl) > 0]
+  
+  if (nrow(tbl) < 2 || ncol(tbl) < 2) {
+    cat("Warning: Not enough data for chi-square test. Skipping this variable.\n")
+    next
+  }
+  
+  test <- tryCatch(
+    chisq.test(tbl, simulate.p.value = TRUE, B = 2000),
+    error = function(e) {
+      cat("Error running test:", e$message, "\nSkipping this variable.\n")
+      return(NULL)
+    }
+  )
+  
+  if (is.null(test)) next
+  
+  print(tbl)
+  print(test)
+  
+  if (test$p.value < 0.05) {
+    cat("=> Reject the null hypothesis: Significant association (p =", test$p.value, ")\n")
+  } else {
+    cat("=> Fail to reject the null hypothesis: No significant association (p =", test$p.value, ")\n")
+  }
+}
+```
+### 5. Composite Financial Literacy Score Construction and Its Association with Demographic Factors
+
+
+
+```{r}
+# Define correct answers for each question
+correct_answers <- list(
+  finlit_interest = "More than Rs. 12,500",          # Q9
+  finlit_inflation = "True",                         # Q10
+  finlit_diversification = "It reduces the overall risk by investing in different assets", # Q11
+  finlit_compound_interest = "Interest is calculated on both the initial amount and any interest already earned", # Q12
+  finlit_risk_investment = "Cryptocurrency or stocks" # Q13
+)
+
+# Add binary correctness columns (1 = correct, 0 = incorrect or NA)
+for (q in names(correct_answers)) {
+  correct_ans <- correct_answers[[q]]
+  data_csv[[paste0(q, "_correct")]] <- ifelse(data_csv[[q]] == correct_ans, 1,
+                                              ifelse(is.na(data_csv[[q]]), NA, 0))
+}
+
+# Create composite financial literacy score (sum of correct answers)
+data_csv$finlit_score <- rowSums(data_csv[, paste0(names(correct_answers), "_correct")], na.rm = TRUE)
+
+#Categorize the composite score
+data_csv <- data_csv %>%
+  mutate(finlit_level = case_when(
+    finlit_score <= 2 ~ "Low",
+    finlit_score == 3 | finlit_score == 4 ~ "Medium",
+    finlit_score == 5 ~ "High",
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(finlit_level = factor(finlit_level, levels = c("Low", "Medium", "High")))
+
+
+#Test association between composite financial literacy and demographic variables
+
+# Function to perform chi-square test and print results
+test_association <- function(demo_var) {
+  cat("\n===================================\n")
+  cat("Association between financial literacy and", demo_var, "\n")
+  
+  tbl <- table(data_csv[[demo_var]], data_csv$finlit_level)
+  tbl <- tbl[rowSums(tbl) > 0, colSums(tbl) > 0]
+  
+  if (nrow(tbl) < 2 || ncol(tbl) < 2) {
+    cat("Not enough data for chi-square test.\n")
+    return()
+  }
+  
+  test <- tryCatch(
+    chisq.test(tbl, simulate.p.value = TRUE, B = 2000),
+    error = function(e) {
+      cat("Error:", e$message, "\n")
+      return(NULL)
+    }
+  )
+  
+  if (is.null(test)) return()
+  
+  print(tbl)
+  print(test)
+  
+  if (test$p.value < 0.05) {
+    cat("=> Significant association found (p =", test$p.value, ")\n")
+  } else {
+    cat("=> No significant association (p =", test$p.value, ")\n")
+  }
+}
+```
+
+
+
+```{r}
+# Run tests for gender, age, and education
+test_association("gender")
+test_association("age")
+test_association("education")
+test_association("employment_status")
+test_association("monthly_income")
+```
+### 6. Advanced Statistical Analysis of Financial Literacy using T-test, ANOVA and Linear Regression
+
+Create Composite Financial Literacy Score
+```{r}
+# Scoring correct answers
+data_csv <- data_csv %>%
+  mutate(
+    score_interest = ifelse(finlit_interest == "More than Rs. 12,500", 1, 0),
+    score_inflation = ifelse(finlit_inflation == TRUE, 1, 0),
+    score_diversification = ifelse(finlit_diversification == "It reduces the overall risk by investing in different assets", 1, 0),
+    score_compound = ifelse(finlit_compound_interest == "Interest is calculated on both the initial amount and any interest already earned", 1, 0),
+    score_risk = ifelse(finlit_risk_investment == "Cryptocurrency or stocks", 1, 0),
+    
+    # Total financial literacy score (0 to 5)
+    finlit_score = score_interest + score_inflation + score_diversification + score_compound + score_risk
+  )
+```
+
+t-Tests (for binary variables like gender)
+```{r}
+t.test(finlit_score ~ gender, data = data_csv)
+```
+
+ANOVA (for multi-category variables like age, education, employment_status, monthly_income)
+
+```{r}
+anova_model <- aov(finlit_score ~ age, data = data_csv)
+summary(anova_model)
+```
+
+
+```{r}
+anova_model <- aov(finlit_score ~ education, data = data_csv)
+summary(anova_model)
+```
+
+```{r}
+anova_model <- aov(finlit_score ~ employment_status, data = data_csv)
+summary(anova_model)
+```
+
+```{r}
+anova_model <- aov(finlit_score ~ monthly_income, data = data_csv)
+summary(anova_model)
+```
+Linear Regression (for continuous or multiple predictors)
+
+
+```{r}
+lm_model <- lm(finlit_score ~ age + gender + education + employment_status +
+                 employment_sector + monthly_income + marital_status + dependent_children,
+               data = data_csv)
+summary(lm_model)
+
+
+```
+##  1. Financial Behavior data Analysis
+
+### 1. Descriptive Statistics
+```{r}
+cat("=== Descriptive Statistics: Financial Behavior (Single-Response) ===\n")
+
+# Single-response variables
+behavior_vars <- c("behavior_saving", "behavior_expense_tracking", 
+                   "behavior_budgeting", "behavior_price_comparison")
+
+# Loop and print stats
+for (var in behavior_vars) {
+  cat("\nVariable:", var, "\n")
+  print(table(data_csv[[var]], useNA = "ifany"))
+  cat("Proportions:\n")
+  print(round(prop.table(table(data_csv[[var]])), 3))
+}
+
+cat("\n=== Descriptive Statistics: Financial Behavior (Multi-Response) ===\n")
+
+multi_vars <- c("behavior_payment_tools", "behavior_digital_tools", "behavior_investment_types")
+
+for (var in multi_vars) {
+  cat("\nVariable:", var, "\n")
+  
+  # Extract and clean responses
+  responses <- data_csv[[var]]
+  responses <- tolower(trimws(responses))  # Optional: lowercase and trim
+  responses_split <- str_split(responses, ",\\s*")  # Split by commas
+  
+  # Flatten list and remove empty values
+  all_responses <- unlist(responses_split)
+  all_responses <- all_responses[all_responses != ""]
+  
+  # Count and proportion
+  response_table <- table(all_responses)
+  prop_table <- round(prop.table(response_table), 3)
+  
+  print(data.frame(Count = response_table, Proportion = prop_table))
+}
+
+```
+### 2. SCORING: Financial Behavior Composite Score
+
+```{r}
+# Convert ordinal variables to numeric
+data_clean <- data_csv %>%
+  mutate(
+    expense_score = case_when(
+      behavior_expense_tracking == "Always" ~ 3,
+      behavior_expense_tracking == "Sometimes" ~ 2,
+      behavior_expense_tracking == "Rarely" ~ 1,
+      behavior_expense_tracking == "Never" ~ 0,
+      TRUE ~ NA_real_
+    ),
+    budgeting_score = case_when(
+      behavior_budgeting == "Always" ~ 3,
+      behavior_budgeting == "Sometimes" ~ 2,
+      behavior_budgeting == "Rarely" ~ 1,
+      behavior_budgeting == "Never" ~ 0,
+      TRUE ~ NA_real_
+    ),
+    saving_score = ifelse(behavior_saving == "Yes", 1, 0),
+    price_compare_score = ifelse(behavior_price_comparison == "Yes", 1, 0)
+  ) %>%
+  rowwise() %>%
+  mutate(fin_behavior_score = sum(c_across(c(expense_score, budgeting_score, saving_score, price_compare_score)), na.rm = TRUE))
+```
+
+```{r}
+# Distribution of financial behavior scores
+cat("\n=== Financial Behavior Composite Score Distribution ===\n")
+summary(data_clean$fin_behavior_score)
+hist(data_clean$fin_behavior_score, main = "Distribution of Financial Behavior Score", xlab = "Score", col = "skyblue")
+```
+### 3. Inferencial Statistics
+
+```{r}
+# 1. T-Test: Does behavior score differ by gender?
+cat("\n=== T-Test: Financial Behavior Score by Gender ===\n")
+ttest_gender <- t.test(fin_behavior_score ~ gender, data = data_clean)
+print(ttest_gender)
+```
+```{r}
+ggplot(data_clean, aes(x = gender, y = fin_behavior_score, fill = gender)) +
+  geom_boxplot() +
+  labs(title = "Financial Behavior Score by Gender", y = "Behavior Score") +
+  theme_minimal()
+```
+
+```{r}
+# 2. ANOVA: Behavior score by education
+cat("\n=== ANOVA: Financial Behavior Score by Education ===\n")
+anova_edu <- aov(fin_behavior_score ~ education, data = data_clean)
+print(summary(anova_edu))
+
+pval_edu <- summary(anova_edu)[[1]][["Pr(>F)"]][1]
+if (!is.na(pval_edu) && pval_edu < 0.05) {
+  cat("Conclusion: Significant difference in behavior scores across education levels.\n")
+} else {
+  cat("Conclusion: No significant difference in behavior scores across education levels.\n")
+}
+```
+```{r}
+ggplot(data_clean, aes(x = education, y = fin_behavior_score, fill = education)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Financial Behavior Score by Education Level", x = "Education", y = "Behavior Score")
+
+```
+
+
+```{r}
+# 3. ANOVA: Financial Behavior by Age Group
+cat("\n=== ANOVA: Financial Behavior Score by Age Group ===\n")
+anova_age <- aov(fin_behavior_score ~ age, data = data_clean)
+print(summary(anova_age))
+```
+```{r}
+ggplot(data_clean, aes(x = age, y = fin_behavior_score, fill = age)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Financial Behavior Score by Age", x = "Age", y = "Behavior Score")
+
+```
+```{r}
+# 4. ANOVA: Behavior score by Monthly Income
+cat("\n=== ANOVA: Financial Behavior Score by Monthly Income ===\n")
+anova_income <- aov(fin_behavior_score ~ monthly_income, data = data_clean)
+print(summary(anova_income))
+
+pval_income <- summary(anova_income)[[1]][["Pr(>F)"]][1]
+if (!is.na(pval_income) && pval_income < 0.05) {
+  cat("Conclusion: Significant difference in behavior scores across monthly income groups.\n")
+} else {
+  cat("Conclusion: No significant difference in behavior scores across monthly income groups.\n")
+}
+
+```
+
+```{r}
+# Plot: Financial Behavior Score by Monthly Income
+ggplot(data_clean, aes(x = monthly_income, y = fin_behavior_score)) +
+  geom_boxplot(fill = "#69b3a2") +
+  labs(title = "Financial Behavior Score by Monthly Income",
+       x = "Monthly Income",
+       y = "Behavior Score") +
+  theme_minimal()
+
+# Save with increased height (e.g., 8 inches)
+ggsave("plot_income_vs_behavior.png", width = 6, height = 10, dpi = 300)
+
+```
+
+```{r}
+# 3. ANOVA: Behavior score by Employment Status
+cat("\n=== ANOVA: Financial Behavior Score by Employment Status ===\n")
+anova_emp <- aov(fin_behavior_score ~ employment_status, data = data_clean)
+print(summary(anova_emp))
+
+pval_emp <- summary(anova_emp)[[1]][["Pr(>F)"]][1]
+if (!is.na(pval_emp) && pval_emp < 0.05) {
+  cat("Conclusion: Significant difference in behavior scores across employment status.\n")
+} else {
+  cat("Conclusion: No significant difference in behavior scores across employment status.\n")
+}
+```
+
+```{r, fig.height=8, fig.width=6}
+# Plot: Financial Behavior Score by Employment Status
+ggplot(data_clean, aes(x = employment_status, y = fin_behavior_score)) +
+  geom_boxplot(fill = "#f9a825") +
+  labs(title = "Financial Behavior Score by Employment Status",
+       x = "Employment Status",
+       y = "Behavior Score") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.margin = margin(t = 10, r = 10, b = 40, l = 10)
+  )
+
+```
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+# 5. Chi-square Test: Payment Tools Usage vs. Gender
+cat("\n=== Chi-Square Test: Payment Tool Usage by Gender ===\n")
+payment_gender_table <- table(data_clean$gender, grepl("Cash", data_clean$behavior_payment_tools))
+chisq_result <- chisq.test(payment_gender_table)
+print(chisq_result)
+```
+
+
+```{r}
+```
+
+
+##  1. Financial Well-Being data Analysis
+
+### 1. Define Variables and Data Preprocessing
+```{r}
+wellbeing_vars <- c(
+  "wellbeing_confidence",
+  "wellbeing_satisfaction",
+  "wellbeing_emergency_funds",
+  "wellbeing_digital_anxiety",
+  "wellbeing_financial_worry",
+  "wellbeing_stress"
+)
+
+demographics_vars <- c(
+  "age",
+  "gender",
+  "education",
+  "employment_status",
+  "employment_sector",
+  "monthly_income",
+  "marital_status",
+  "dependent_children"
+)
+
+# Convert wellbeing variables to numeric (if not already)s
+data_csv <- data_csv %>%
+  mutate(across(all_of(wellbeing_vars), ~ as.numeric(as.character(.))))
+
+# Remove rows with missing wellbeing data for consistent analysis
+data_clean <- data_csv %>%
+  filter(if_all(all_of(wellbeing_vars), ~ !is.na(.)))
+```
+
+### 2. Descriptive Statistics
+
+```{r}
+cat("=== Descriptive Statistics for Individual Well-being Questions ===\n")
+desc_individual <- describe(data_clean[wellbeing_vars])
+print(desc_individual)
+
+# Create composite wellbeing score (average of all items)
+data_clean <- data_clean %>%
+  rowwise() %>%
+  mutate(wellbeing_score = mean(c_across(all_of(wellbeing_vars)), na.rm = TRUE)) %>%
+  ungroup()
+
+cat("\n=== Descriptive Statistics for Composite Well-being Score ===\n")
+desc_composite <- describe(data_clean$wellbeing_score)
+print(desc_composite)
+```
+
+### 3. Inferential Statistics
+```{r}
+# 4.1 T-test: Does wellbeing_score differ by gender?
+cat("\n=== T-test: Composite Well-being Score by Gender ===\n")
+ttest_gender <- t.test(wellbeing_score ~ gender, data = data_clean)
+print(ttest_gender)
+
+if (!is.na(ttest_gender$p.value) && ttest_gender$p.value < 0.05) {
+  cat("Conclusion: There is a significant difference in composite well-being scores between genders.\n")
+} else {
+  cat("Conclusion: No significant difference in composite well-being scores between genders.\n")
+}
+```
+
+```{r}
+ggplot(data_clean, aes(x = gender, y = wellbeing_score)) +
+   geom_boxplot(fill = "skyblue") +
+   labs(title = "Composite Financial Well-being Score by Gender",
+        x = "Gender", y = "Well-being Score") +
+   theme_minimal()
+
+```
+
+```{r}
+# 4.2 ANOVA: Does wellbeing_score differ by education level?
+cat("\n=== ANOVA: Composite Well-being Score by Education ===\n")
+anova_education <- aov(wellbeing_score ~ education, data = data_clean)
+print(summary(anova_education))
+
+pval_education <- summary(anova_education)[[1]][["Pr(>F)"]][1]
+if (!is.na(pval_education) && pval_education < 0.05) {
+  cat("Conclusion: There is a significant difference in composite well-being scores between education levels.\n")
+} else {
+  cat("Conclusion: No significant difference in composite well-being scores between education levels.\n")
+}
+```
+```{r}
+# Visualization: Boxplot for Eductaion Level
+ggplot(data_clean, aes(x = education, y = wellbeing_score, fill = education)) +
+  geom_boxplot() +
+  labs(title = "Composite Well-being Score by Eductaion Level", x = "Eductaion Level", y = "Well-being Score") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
+```
+
+```{r}
+# 4.3 ANOVA: Does wellbeing_score differ by Age?
+cat("\n=== ANOVA: Composite Well-being Score by Age ===\n")
+anova_age <- aov(wellbeing_score ~ age, data = data_clean)
+print(summary(anova_age))
+
+pval_age <- summary(anova_age)[[1]][["Pr(>F)"]][1]
+if (!is.na(pval_age) && pval_age < 0.05) {
+  cat("Conclusion: There is a significant difference in composite well-being scores between age groups.\n")
+} else {
+  cat("Conclusion: No significant difference in composite well-being scores between age groups.\n")
+}
+```
+
+
+```{r}
+# Visualization: Boxplot for Age
+ggplot(data_clean, aes(x = age, y = wellbeing_score, fill = age)) +
+  geom_boxplot() +
+  labs(title = "Composite Well-being Score by Age Group", x = "Age Group", y = "Well-being Score") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+```{r}
+# 4.4 ANOVA: Does wellbeing_score differ by Monthly Income?
+cat("\n=== ANOVA: Composite Well-being Score by Monthly Income ===\n")
+anova_income <- aov(wellbeing_score ~ monthly_income, data = data_clean)
+print(summary(anova_income))
+
+pval_income <- summary(anova_income)[[1]][["Pr(>F)"]][1]
+if (!is.na(pval_income) && pval_income < 0.05) {
+  cat("Conclusion: There is a significant difference in composite well-being scores between income levels.\n")
+} else {
+  cat("Conclusion: No significant difference in composite well-being scores between income levels.\n")
+}
+
+```
+
+```{r}
+# Visualization: Boxplot for Monthly Income
+ggplot(data_clean, aes(x = monthly_income, y = wellbeing_score, fill = monthly_income)) +
+  geom_boxplot() +
+  labs(title = "Composite Well-being Score by Monthly Income", x = "Monthly Income", y = "Well-being Score") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
+```
+
+```{r}
+# 4.5 ANOVA: Does wellbeing_score differ by Employment Status?
+cat("\n=== ANOVA: Composite Well-being Score by Employment Status ===\n")
+anova_employment <- aov(wellbeing_score ~ employment_status, data = data_clean)
+print(summary(anova_employment))
+
+pval_employment <- summary(anova_employment)[[1]][["Pr(>F)"]][1]
+if (!is.na(pval_employment) && pval_employment < 0.05) {
+  cat("Conclusion: There is a significant difference in composite well-being scores between employment statuses.\n")
+} else {
+  cat("Conclusion: No significant difference in composite well-being scores between employment statuses.\n")
+}
+```
+
+```{r}
+# Visualization: Boxplot for Employment Status
+ggplot(data_clean, aes(x = employment_status, y = wellbeing_score, fill = employment_status)) +
+  geom_boxplot() +
+  labs(title = "Composite Well-being Score by Employment Status", x = "Employment Status", y = "Well-being Score") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
+```
+
+```{r}
+# 4.3 Linear Regression: Predict wellbeing_score using demographic variables
+cat("\n=== Linear Regression: Predicting Composite Well-being Score ===\n")
+
+# Convert categorical demographic vars to factors if needed
+data_clean <- data_clean %>%
+  mutate(across(c(gender, education, employment_status, employment_sector, marital_status), as.factor))
+
+model_formula <- wellbeing_score ~ age + gender + education + employment_status + 
+  employment_sector + monthly_income + marital_status + dependent_children
+
+lm_model <- lm(model_formula, data = data_clean)
+summary_lm <- summary(lm_model)
+print(summary_lm)
+
+# Interpretation of significant predictors
+sig_vars <- summary_lm$coefficients[summary_lm$coefficients[,4] < 0.05, , drop=FALSE]
+if (nrow(sig_vars) > 0) {
+  cat("\nSignificant predictors of financial well-being:\n")
+  print(sig_vars)
+} else {
+  cat("\nNo significant demographic predictors found for financial well-being.\n")
+}
+```
+```{r}
+# Model 1: Financial Behavior predicted by Financial Literacy
+model_behavior <- lm(fin_behavior_score ~ finlit_score, data = data_csv)
+summary(model_behavior)
+
+# Model 2: Financial Well-Being predicted by Financial Literacy
+model_wellbeing <- lm(wellbeing_score ~ finlit_score, data = data_csv)
+summary(model_wellbeing)
+
+```
+
+

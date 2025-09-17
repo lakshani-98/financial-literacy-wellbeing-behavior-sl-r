@@ -1,4 +1,4 @@
-# Money Matters: A Survey on Financial Literacy, Well-being, and Behavior among Sri Lankan Adults
+# 💰 Money Matters: A Survey on Financial Literacy, Well-being, and Behavior among Sri Lankan Adults
 
 This repository contains the R-based analysis of a survey conducted to explore the relationship between **financial literacy, financial behavior, and financial well-being** among Sri Lankan adults.  
 
